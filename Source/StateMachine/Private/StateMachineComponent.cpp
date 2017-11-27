@@ -24,28 +24,43 @@ UStateMachineComponent::Track::~Track()
 
 UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit)
 {
-	checkf(m_stateMachine->m_states.Find(_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), _name.GetPlainNameString());
+	State* state = AddState(_name);
 
-	State* state = new State(_name, this, m_stateMachine);
 	state->Enter = _enter;
 	state->Tick = _tick;
 	state->Exit = _exit;
+
+	return state;
+}
+
+
+UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _name)
+{
+	checkf(m_stateMachine->m_states.Find(_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), *_name.GetPlainNameString());
+
+	State* state = new State(_name, this, m_stateMachine);
 
 	m_states.Add(_name) = state;
 	m_stateMachine->m_states.Add(_name) = state;
 	return state;
 }
 
-
 UStateMachineComponent::State* UStateMachineComponent::Track::AddDefaultState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit)
 {
-	checkf(m_defaultState == nullptr, TEXT("A State with the name \"%s\" already exists."), _name.GetPlainNameString());
+	checkf(m_defaultState == nullptr, TEXT("A State with the name \"%s\" already exists."), *_name.GetPlainNameString());
 
 	State* state = AddState(_name, _enter, _tick, _exit);
 	m_defaultState = state;
 	return state;
 }
 
+
+UStateMachineComponent::State* UStateMachineComponent::Track::AddDefaultState(FName _name)
+{
+	State* state = AddState(_name);
+	m_defaultState = state;
+	return state;
+}
 
 UStateMachineComponent::State::State(FName _name, Track* _parent, UStateMachineComponent* _stateMachine)
 	: m_name(_name)
@@ -67,7 +82,7 @@ UStateMachineComponent::State::~State()
 
 UStateMachineComponent::Track* UStateMachineComponent::State::AddTrack(FName _name)
 {
-	checkf(m_stateMachine->m_tracks.Find(_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), _name.GetPlainNameString());
+	checkf(m_stateMachine->m_tracks.Find(_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), *_name.GetPlainNameString());
 
 	Track* track = new Track(_name, this, m_stateMachine);
 	m_tracks.Add(_name) = track;
@@ -268,7 +283,7 @@ void UStateMachineComponent::StopStateMachine()
 void UStateMachineComponent::PostStateMachineEvent(FName _eventName)
 {
 	check(IsStarted());
-	checkf(m_eventTransitions.Find(_eventName) != nullptr, TEXT("Unknown event name \"%s\"."), _eventName.GetPlainNameString());
+	checkf(m_eventTransitions.Find(_eventName) != nullptr, TEXT("Unknown event name \"%s\"."), *_eventName.GetPlainNameString());
 
 	m_eventsQueue.Add(_eventName);
 #if STATEMACHINE_HISTORY_ENABLED 
@@ -318,13 +333,13 @@ bool UStateMachineComponent::_VisitState(State* _state, TrackVisitorDelegate _tr
 
 bool UStateMachineComponent::_AssertIfTrackExists(Track* _track)
 {
-	checkf(m_tracks.Find(_track->m_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), _track->m_name.GetPlainNameString());
+	checkf(m_tracks.Find(_track->m_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), *_track->m_name.GetPlainNameString());
 	return true;
 }
 
 bool UStateMachineComponent::_AssertIfStateExists(State * _state)
 {
-	checkf(m_states.Find(_state->m_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), _state->m_name.GetPlainNameString());
+	checkf(m_states.Find(_state->m_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), *_state->m_name.GetPlainNameString());
 	return true;
 }
 

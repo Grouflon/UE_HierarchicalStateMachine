@@ -33,7 +33,9 @@ public:
 		friend class UStateMachineComponent;
 		friend class State;
 	public:
+		State* AddState(FName _name);
 		State* AddState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit);
+		State* AddDefaultState(FName _name);
 		State* AddDefaultState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit);
 
 	private:
@@ -166,9 +168,8 @@ private:
 // DEFINITION HELPERS
 // ==================
 
-#define STATEMACHINE_DEFINITION(StateMachineComponentPointer, OwnerClass)\
+#define STATEMACHINE_DEFINITION(StateMachineComponentPointer)\
 	{\
-	typedef OwnerClass _OwnerClass;\
 	UStateMachineComponent* __UStateMachineComponent = StateMachineComponentPointer;\
 	TArray<UStateMachineComponent::Track*> __trackStack;\
 	TArray<UStateMachineComponent::State*> __stateStack;\
@@ -184,13 +185,7 @@ private:
 
 #define DEFAULT_STATE(StateName)\
 	{\
-		UStateMachineComponent::StateEnterDelegate __enter;\
-		UStateMachineComponent::StateTickDelegate __tick;\
-		UStateMachineComponent::StateExitDelegate __exit;\
-		__enter.BindUObject(this, &_OwnerClass::##StateName##_Enter);\
-		__tick.BindUObject(this, &_OwnerClass::##StateName##_Tick);\
-		__exit.BindUObject(this, &_OwnerClass::##StateName##_Exit);\
-		__state = __trackStack.Top()->AddDefaultState(TEXT(#StateName), __enter, __tick, __exit); \
+		__state = __trackStack.Top()->AddDefaultState(TEXT(#StateName)); \
 		__stateStack.Push(__state);\
 	}\
 	_STATE_CONTENT
@@ -198,16 +193,17 @@ private:
 
 #define STATE(StateName)\
 	{\
-		UStateMachineComponent::StateEnterDelegate __enter;\
-		UStateMachineComponent::StateTickDelegate __tick;\
-		UStateMachineComponent::StateExitDelegate __exit;\
-		__enter.BindUObject(this, &_OwnerClass::##StateName##_Enter);\
-		__tick.BindUObject(this, &_OwnerClass::##StateName##_Tick);\
-		__exit.BindUObject(this, &_OwnerClass::##StateName##_Exit);\
-		__state = __trackStack.Top()->AddState(TEXT(#StateName), __enter, __tick, __exit); \
+		__state = __trackStack.Top()->AddState(TEXT(#StateName)); \
 		__stateStack.Push(__state);\
 	}\
 	_STATE_CONTENT
+
+#define STATE_ENTER(objectPtr, methodPtr) __state->Enter.BindUObject(objectPtr, methodPtr)
+
+#define STATE_TICK(objectPtr, methodPtr) __state->Tick.BindUObject(objectPtr, methodPtr)
+
+#define STATE_EXIT(objectPtr, methodPtr) __state->Exit.BindUObject(objectPtr, methodPtr)
+
 
 
 #define _STATE_CONTENT(...)\
