@@ -6,11 +6,16 @@
 #include "Components/ActorComponent.h"
 #include "StateMachineComponent.generated.h"
 
+#define STATEMACHINE_ASSERT(cond) check(cond)
+#define STATEMACHINE_ASSERTF(cond, fmt, ...) checkf(cond, fmt, __VA_ARGS__)
+
 #ifdef UE_EDITOR
 	#define STATEMACHINE_HISTORY_ENABLED 1
 #else
 	#define STATEMACHINE_HISTORY_ENABLED 0
 #endif
+
+#define PRINT_HISTORY_IN_LOG 0
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class STATEMACHINE_API UStateMachineComponent : public UActorComponent
@@ -94,6 +99,7 @@ public:
 	void StartStateMachine();
 	void TickStateMachine(float _dt);
 	void StopStateMachine();
+	void DequeueEvents(uint16 _dequeuedEventsLimit = -1);
 
 	void PostStateMachineEvent(FName _eventName);
 
@@ -116,7 +122,6 @@ private:
 	bool _AssertIfStateExists(State* _track);
 
 	Track* _FindClosestCommonTrack(const State* _stateA, const State* _stateB);
-	void _DequeueEvents(uint16 _dequeuedEventsLimit = -1);
 
 	struct EventTransition
 	{

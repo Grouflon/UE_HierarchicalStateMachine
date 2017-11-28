@@ -36,7 +36,7 @@ UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _na
 
 UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _name)
 {
-	checkf(m_stateMachine->m_states.Find(_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), *_name.GetPlainNameString());
+	STATEMACHINE_ASSERTF(m_stateMachine->m_states.Find(_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), *_name.GetPlainNameString());
 
 	State* state = new State(_name, this, m_stateMachine);
 
@@ -47,7 +47,7 @@ UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _na
 
 UStateMachineComponent::State* UStateMachineComponent::Track::AddDefaultState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit)
 {
-	checkf(m_defaultState == nullptr, TEXT("A State with the name \"%s\" already exists."), *_name.GetPlainNameString());
+	STATEMACHINE_ASSERTF(m_defaultState == nullptr, TEXT("A State with the name \"%s\" already exists."), *_name.GetPlainNameString());
 
 	State* state = AddState(_name, _enter, _tick, _exit);
 	m_defaultState = state;
@@ -82,7 +82,7 @@ UStateMachineComponent::State::~State()
 
 UStateMachineComponent::Track* UStateMachineComponent::State::AddTrack(FName _name)
 {
-	checkf(m_stateMachine->m_tracks.Find(_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), *_name.GetPlainNameString());
+	STATEMACHINE_ASSERTF(m_stateMachine->m_tracks.Find(_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), *_name.GetPlainNameString());
 
 	Track* track = new Track(_name, this, m_stateMachine);
 	m_tracks.Add(_name) = track;
@@ -202,8 +202,8 @@ void UStateMachineComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void UStateMachineComponent::StartStateMachine()
 {
-	check(!IsStarted());
-	check(m_currentStates.Num() == 0);
+	STATEMACHINE_ASSERT(!IsStarted());
+	STATEMACHINE_ASSERT(m_currentStates.Num() == 0);
 
 #if STATEMACHINE_HISTORY_ENABLED
 	_LogStateMachineStarted();
@@ -239,8 +239,8 @@ void UStateMachineComponent::StartStateMachine()
 
 void UStateMachineComponent::TickStateMachine(float _dt)
 {
-	check(IsStarted());
-	check(!m_ticking);
+	STATEMACHINE_ASSERT(IsStarted());
+	STATEMACHINE_ASSERT(!m_ticking);
 
 	m_ticking = true;
 	for (State* state : m_currentStates)
@@ -249,7 +249,7 @@ void UStateMachineComponent::TickStateMachine(float _dt)
 	}
 	m_ticking = false;
 
-	_DequeueEvents();
+	DequeueEvents();
 
 	if (!m_started)
 	{
@@ -260,7 +260,7 @@ void UStateMachineComponent::TickStateMachine(float _dt)
 
 void UStateMachineComponent::StopStateMachine()
 {
-	check(IsStarted());
+	STATEMACHINE_ASSERT(IsStarted());
 	m_started = false;
 	if (!m_ticking)
 	{
@@ -282,8 +282,8 @@ void UStateMachineComponent::StopStateMachine()
 
 void UStateMachineComponent::PostStateMachineEvent(FName _eventName)
 {
-	check(IsStarted());
-	checkf(m_eventTransitions.Find(_eventName) != nullptr, TEXT("Unknown event name \"%s\"."), *_eventName.GetPlainNameString());
+	STATEMACHINE_ASSERT(IsStarted());
+	STATEMACHINE_ASSERTF(m_eventTransitions.Find(_eventName) != nullptr, TEXT("Unknown event name \"%s\"."), *_eventName.GetPlainNameString());
 
 	m_eventsQueue.Add(_eventName);
 #if STATEMACHINE_HISTORY_ENABLED 
@@ -291,7 +291,7 @@ void UStateMachineComponent::PostStateMachineEvent(FName _eventName)
 #endif
 	if (bImmediatelyDequeueEvents && !m_ticking)
 	{
-		_DequeueEvents();
+		DequeueEvents();
 	}
 }
 
@@ -333,13 +333,13 @@ bool UStateMachineComponent::_VisitState(State* _state, TrackVisitorDelegate _tr
 
 bool UStateMachineComponent::_AssertIfTrackExists(Track* _track)
 {
-	checkf(m_tracks.Find(_track->m_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), *_track->m_name.GetPlainNameString());
+	STATEMACHINE_ASSERTF(m_tracks.Find(_track->m_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), *_track->m_name.GetPlainNameString());
 	return true;
 }
 
 bool UStateMachineComponent::_AssertIfStateExists(State * _state)
 {
-	checkf(m_states.Find(_state->m_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), *_state->m_name.GetPlainNameString());
+	STATEMACHINE_ASSERTF(m_states.Find(_state->m_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), *_state->m_name.GetPlainNameString());
 	return true;
 }
 
@@ -374,7 +374,7 @@ UStateMachineComponent::Track* UStateMachineComponent::_FindClosestCommonTrack(c
 	return nullptr;
 }
 
-void UStateMachineComponent::_DequeueEvents(uint16 _dequeuedEventsLimit)
+void UStateMachineComponent::DequeueEvents(uint16 _dequeuedEventsLimit)
 {
 	if (_dequeuedEventsLimit == -1)
 		_dequeuedEventsLimit = STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT;
@@ -477,7 +477,9 @@ void UStateMachineComponent::_LogStateMachineStarted()
 	entry.time = FDateTime::Now();
 	m_history.Add(entry);
 
+#if PRINT_HISTORY_IN_LOG
 	UE_LOG(LogTemp, Display, TEXT("[StateMachine] Started State Machine."));
+#endif
 }
 
 void UStateMachineComponent::_LogStateMachineStopped()
@@ -487,7 +489,9 @@ void UStateMachineComponent::_LogStateMachineStopped()
 	entry.time = FDateTime::Now();
 	m_history.Add(entry);
 
+#if PRINT_HISTORY_IN_LOG
 	UE_LOG(LogTemp, Display, TEXT("[StateMachine] Stopped State Machine."));
+#endif
 }
 
 void UStateMachineComponent::_LogStateEntered(State* _state)
@@ -498,7 +502,9 @@ void UStateMachineComponent::_LogStateEntered(State* _state)
 	entry.state = _state;
 	m_history.Add(entry);
 
+#if PRINT_HISTORY_IN_LOG
 	UE_LOG(LogTemp, Display, TEXT("[StateMachine] Entered state \"%s\"."), *_state->m_name.GetPlainNameString());
+#endif
 }
 
 void UStateMachineComponent::_LogStateExited(State* _state)
@@ -509,7 +515,9 @@ void UStateMachineComponent::_LogStateExited(State* _state)
 	entry.state = _state;
 	m_history.Add(entry);
 
+#if PRINT_HISTORY_IN_LOG
 	UE_LOG(LogTemp, Display, TEXT("[StateMachine] Exited state \"%s\"."), *_state->m_name.GetPlainNameString());
+#endif
 }
 
 void UStateMachineComponent::_LogEventPushed(FName _name)
@@ -520,7 +528,9 @@ void UStateMachineComponent::_LogEventPushed(FName _name)
 	entry.eventName = _name;
 	m_history.Add(entry);
 
+#if PRINT_HISTORY_IN_LOG
 	UE_LOG(LogTemp, Display, TEXT("[StateMachine] Pushed event \"%s\"."), *_name.GetPlainNameString());
+#endif
 }
 
 void UStateMachineComponent::_LogEventPopped(FName _name)
@@ -531,6 +541,8 @@ void UStateMachineComponent::_LogEventPopped(FName _name)
 	entry.eventName = _name;
 	m_history.Add(entry);
 
+#if PRINT_HISTORY_IN_LOG
 	UE_LOG(LogTemp, Display, TEXT("[StateMachine] Popped event \"%s\"."), *_name.GetPlainNameString());
+#endif
 }
 #endif
