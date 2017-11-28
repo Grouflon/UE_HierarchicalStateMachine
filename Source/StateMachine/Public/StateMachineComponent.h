@@ -38,6 +38,9 @@ public:
 		State* AddDefaultState(FName _name);
 		State* AddDefaultState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit);
 
+		FORCEINLINE State* GetParentState() const { return m_parent; }
+		FORCEINLINE const FName& GetName() const { return m_name; }
+
 	private:
 		Track(FName _name, State* _parent, UStateMachineComponent* _stateMachine);
 		~Track();
@@ -61,6 +64,9 @@ public:
 		Track* AddTrack(FName _name);
 
 		bool IsInTrack(const Track* _track);
+
+		FORCEINLINE Track* GetParentTrack() const { return m_parent; }
+		FORCEINLINE const FName& GetName() const { return m_name; }
 
 	private:
 		State(FName _name, Track* _parent, UStateMachineComponent* _stateMachine);
@@ -90,6 +96,8 @@ public:
 	void StopStateMachine();
 
 	void PostStateMachineEvent(FName _eventName);
+
+	FORCEINLINE const TArray<State*>& GetCurrentStates() const { return m_currentStates; }
 
 	FORCEINLINE bool IsStarted() const { return m_started; }
 
