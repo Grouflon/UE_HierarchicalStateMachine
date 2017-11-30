@@ -282,14 +282,13 @@ void UStateMachineComponent::StopStateMachine()
 
 void UStateMachineComponent::PostStateMachineEvent(FName _eventName)
 {
-	STATEMACHINE_ASSERT(IsStarted());
 	STATEMACHINE_ASSERTF(m_eventTransitions.Find(_eventName) != nullptr, TEXT("Unknown event name \"%s\"."), *_eventName.GetPlainNameString());
 
 	m_eventsQueue.Add(_eventName);
 #if STATEMACHINE_HISTORY_ENABLED 
 	_LogEventPushed(_eventName);
 #endif
-	if (bImmediatelyDequeueEvents && !m_ticking)
+	if (bImmediatelyDequeueEvents && !m_ticking && IsStarted())
 	{
 		DequeueEvents();
 	}
