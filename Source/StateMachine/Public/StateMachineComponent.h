@@ -109,6 +109,7 @@ public:
 
 public:
 	bool bAutoStartStateMachine : 1;
+	bool bAutoStopStateMachine : 1;
 	bool bAutoTickStateMachine : 1;
 	bool bImmediatelyDequeueEvents : 1;
 

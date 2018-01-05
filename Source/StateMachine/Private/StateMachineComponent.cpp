@@ -107,6 +107,7 @@ bool UStateMachineComponent::State::IsInTrack(const Track* _track)
 
 UStateMachineComponent::UStateMachineComponent()
 	: bAutoStartStateMachine(true)
+	, bAutoStopStateMachine(true)
 	, bAutoTickStateMachine(true)
 	, bImmediatelyDequeueEvents(true)
 {
@@ -192,7 +193,7 @@ void UStateMachineComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	if (IsStarted())
+	if (IsStarted() && bAutoStopStateMachine)
 	{
 		StopStateMachine();
 	}
