@@ -352,6 +352,10 @@ UStateMachineComponent::Track* UStateMachineComponent::_FindClosestCommonTrack(c
 		return _stateA->m_parent; // Easy skip
 
 	TArray<Track*> ATracks;
+	for (auto& pair : _stateA->m_tracks)
+	{
+		ATracks.Add(pair.Value);
+	}
 	Track* currentTrack = _stateA->m_parent;
 	while (currentTrack != nullptr)
 	{
@@ -359,6 +363,14 @@ UStateMachineComponent::Track* UStateMachineComponent::_FindClosestCommonTrack(c
 		currentTrack = currentTrack->m_parent ? currentTrack->m_parent->m_parent : nullptr;
 	}
 
+	for (auto& pair : _stateB->m_tracks)
+	{
+		int32 i = ATracks.Find(pair.Value);
+		if (i != INDEX_NONE)
+		{
+			return ATracks[i];
+		}
+	}
 	currentTrack = _stateB->m_parent;
 	while (currentTrack != nullptr)
 	{
@@ -394,8 +406,7 @@ void UStateMachineComponent::DequeueEvents(uint16 _dequeuedEventsLimit)
 
 		for (const EventTransition* transition : transitions)
 		{
-			if (m_currentStates.Find(transition->source) == INDEX_NONE ||
-				m_currentStates.Find(transition->target) != INDEX_NONE)
+			if (m_currentStates.Find(transition->source) == INDEX_NONE)
 			{
 				continue;
 			}
