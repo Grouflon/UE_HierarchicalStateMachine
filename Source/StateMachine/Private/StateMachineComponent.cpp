@@ -2,6 +2,8 @@
 
 #include "StateMachineComponent.h"
 
+#include <Engine/Engine.h>
+
 #define STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT 5000
 
 UStateMachineComponent::Track::Track(FName _name, State* _parent, UStateMachineComponent* _stateMachine)
@@ -295,6 +297,23 @@ void UStateMachineComponent::PostStateMachineEvent(FName _eventName)
 	}
 }
 
+
+void UStateMachineComponent::DebugDisplayCurrentStates(const FColor& _color)
+{
+	if (GEngine)
+	{
+		FString states;
+		for (State* state : m_currentStates)
+		{
+			states += state->GetParentTrack()->GetName().GetPlainNameString();
+			states += ": ";
+			states += state->GetName().GetPlainNameString();
+			states += "\n";
+		}
+
+		GEngine->AddOnScreenDebugMessage(-1, 0.f, _color, *states);
+	}
+}
 
 bool UStateMachineComponent::_VisitTrack(Track* _track, TrackVisitorDelegate _trackVisitor, StateVisitorDelegate _stateVisitor)
 {

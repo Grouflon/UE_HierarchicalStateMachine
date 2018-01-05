@@ -107,6 +107,8 @@ public:
 
 	FORCEINLINE bool IsStarted() const { return m_started; }
 
+	void DebugDisplayCurrentStates(const FColor& _color);
+
 public:
 	bool bAutoStartStateMachine : 1;
 	bool bAutoStopStateMachine : 1;
