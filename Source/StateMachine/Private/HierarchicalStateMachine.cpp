@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "StateMachineComponent.h"
+#include "HierarchicalStateMachine.h"
 
 #include <Engine/Engine.h>
 
 #define STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT 5000
 
-UStateMachineComponent::Track::Track(FName _name, State* _parent, UStateMachineComponent* _stateMachine)
+UHierarchicalStateMachine::Track::Track(FName _name, State* _parent, UHierarchicalStateMachine* _stateMachine)
 	: m_name(_name)
 	, m_parent(_parent)
 	, m_stateMachine(_stateMachine)
@@ -14,7 +14,7 @@ UStateMachineComponent::Track::Track(FName _name, State* _parent, UStateMachineC
 }
 
 
-UStateMachineComponent::Track::~Track()
+UHierarchicalStateMachine::Track::~Track()
 {
 	for (auto& pair : m_states)
 	{
@@ -24,7 +24,7 @@ UStateMachineComponent::Track::~Track()
 }
 
 
-UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit)
+UHierarchicalStateMachine::State* UHierarchicalStateMachine::Track::AddState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit)
 {
 	State* state = AddState(_name);
 
@@ -36,7 +36,7 @@ UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _na
 }
 
 
-UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _name)
+UHierarchicalStateMachine::State* UHierarchicalStateMachine::Track::AddState(FName _name)
 {
 	STATEMACHINE_ASSERTF(m_stateMachine->m_states.Find(_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), *_name.GetPlainNameString());
 
@@ -47,7 +47,7 @@ UStateMachineComponent::State* UStateMachineComponent::Track::AddState(FName _na
 	return state;
 }
 
-UStateMachineComponent::State* UStateMachineComponent::Track::AddDefaultState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit)
+UHierarchicalStateMachine::State* UHierarchicalStateMachine::Track::AddDefaultState(FName _name, const StateEnterDelegate& _enter, const StateTickDelegate& _tick, const StateExitDelegate& _exit)
 {
 	STATEMACHINE_ASSERTF(m_defaultState == nullptr, TEXT("A State with the name \"%s\" already exists."), *_name.GetPlainNameString());
 
@@ -57,14 +57,14 @@ UStateMachineComponent::State* UStateMachineComponent::Track::AddDefaultState(FN
 }
 
 
-UStateMachineComponent::State* UStateMachineComponent::Track::AddDefaultState(FName _name)
+UHierarchicalStateMachine::State* UHierarchicalStateMachine::Track::AddDefaultState(FName _name)
 {
 	State* state = AddState(_name);
 	m_defaultState = state;
 	return state;
 }
 
-UStateMachineComponent::State::State(FName _name, Track* _parent, UStateMachineComponent* _stateMachine)
+UHierarchicalStateMachine::State::State(FName _name, Track* _parent, UHierarchicalStateMachine* _stateMachine)
 	: m_name(_name)
 	, m_parent(_parent)
 	, m_stateMachine(_stateMachine)
@@ -72,7 +72,7 @@ UStateMachineComponent::State::State(FName _name, Track* _parent, UStateMachineC
 }
 
 
-UStateMachineComponent::State::~State()
+UHierarchicalStateMachine::State::~State()
 {
 	for (auto& pair : m_tracks)
 	{
@@ -82,7 +82,7 @@ UStateMachineComponent::State::~State()
 }
 
 
-UStateMachineComponent::Track* UStateMachineComponent::State::AddTrack(FName _name)
+UHierarchicalStateMachine::Track* UHierarchicalStateMachine::State::AddTrack(FName _name)
 {
 	STATEMACHINE_ASSERTF(m_stateMachine->m_tracks.Find(_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), *_name.GetPlainNameString());
 
@@ -93,7 +93,7 @@ UStateMachineComponent::Track* UStateMachineComponent::State::AddTrack(FName _na
 }
 
 
-bool UStateMachineComponent::State::IsInTrack(const Track* _track)
+bool UHierarchicalStateMachine::State::IsInTrack(const Track* _track)
 {
 	Track* currentTrack = m_parent;
 	while (currentTrack != nullptr)
@@ -107,17 +107,13 @@ bool UStateMachineComponent::State::IsInTrack(const Track* _track)
 }
 
 
-UStateMachineComponent::UStateMachineComponent()
-	: bAutoStartStateMachine(true)
-	, bAutoStopStateMachine(true)
-	, bAutoTickStateMachine(true)
-	, bImmediatelyDequeueEvents(true)
+UHierarchicalStateMachine::UHierarchicalStateMachine()
+	: bImmediatelyDequeueEvents(true)
 {
-	PrimaryComponentTick.bCanEverTick = true;
 }
 
 
-UStateMachineComponent::~UStateMachineComponent()
+UHierarchicalStateMachine::~UHierarchicalStateMachine()
 {
 	for (auto& pair : m_eventTransitions)
 	{
@@ -139,16 +135,16 @@ UStateMachineComponent::~UStateMachineComponent()
 }
 
 
-UStateMachineComponent::Track* UStateMachineComponent::AddRootTrack(FName _name)
+UHierarchicalStateMachine::Track* UHierarchicalStateMachine::AddRootTrack(FName _name)
 {
 	Track* track = new Track(_name, nullptr, this);
 	return AddRootTrack(track);
 }
 
-UStateMachineComponent::Track * UStateMachineComponent::AddRootTrack(Track * _track)
+UHierarchicalStateMachine::Track * UHierarchicalStateMachine::AddRootTrack(Track * _track)
 {
 #if DO_CHECK
-	_VisitTrack(_track, TrackVisitorDelegate::CreateUObject(this, &UStateMachineComponent::_AssertIfTrackExists), StateVisitorDelegate::CreateUObject(this, &UStateMachineComponent::_AssertIfStateExists));
+	_VisitTrack(_track, TrackVisitorDelegate::CreateUObject(this, &UHierarchicalStateMachine::_AssertIfTrackExists), StateVisitorDelegate::CreateUObject(this, &UHierarchicalStateMachine::_AssertIfStateExists));
 #endif
 
 	m_rootTracks.Add(_track);
@@ -157,7 +153,7 @@ UStateMachineComponent::Track * UStateMachineComponent::AddRootTrack(Track * _tr
 }
 
 
-void UStateMachineComponent::AddEventTransition(FName _eventName, FName _sourceStateName, FName _targetStateName)
+void UHierarchicalStateMachine::AddEventTransition(FName _eventName, FName _sourceStateName, FName _targetStateName)
 {
 	State* sourceState = *m_states.Find(_sourceStateName);
 	State* targetState = *m_states.Find(_targetStateName);
@@ -169,41 +165,7 @@ void UStateMachineComponent::AddEventTransition(FName _eventName, FName _sourceS
 }
 
 
-void UStateMachineComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (bAutoStartStateMachine)
-	{
-		StartStateMachine();
-	}
-}
-
-
-void UStateMachineComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	if (IsStarted() && bAutoTickStateMachine)
-	{
-		TickStateMachine(DeltaTime);
-	}
-}
-
-
-void UStateMachineComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-
-	if (IsStarted() && bAutoStopStateMachine)
-	{
-		StopStateMachine();
-	}
-}
-
-
-
-void UStateMachineComponent::StartStateMachine()
+void UHierarchicalStateMachine::Start()
 {
 	STATEMACHINE_ASSERT(!IsStarted());
 	STATEMACHINE_ASSERT(m_currentStates.Num() == 0);
@@ -240,7 +202,7 @@ void UStateMachineComponent::StartStateMachine()
 }
 
 
-void UStateMachineComponent::TickStateMachine(float _dt)
+void UHierarchicalStateMachine::Tick(float _dt)
 {
 	STATEMACHINE_ASSERT(IsStarted());
 	STATEMACHINE_ASSERT(!m_ticking);
@@ -256,12 +218,12 @@ void UStateMachineComponent::TickStateMachine(float _dt)
 
 	if (!m_started)
 	{
-		StopStateMachine();
+		Stop();
 	}
 }
 
 
-void UStateMachineComponent::StopStateMachine()
+void UHierarchicalStateMachine::Stop()
 {
 	STATEMACHINE_ASSERT(IsStarted());
 	m_started = false;
@@ -283,7 +245,7 @@ void UStateMachineComponent::StopStateMachine()
 }
 
 
-void UStateMachineComponent::PostStateMachineEvent(FName _eventName)
+void UHierarchicalStateMachine::PostEvent(FName _eventName)
 {
 	STATEMACHINE_ASSERTF(m_eventTransitions.Find(_eventName) != nullptr, TEXT("Unknown event name \"%s\"."), *_eventName.GetPlainNameString());
 
@@ -298,7 +260,7 @@ void UStateMachineComponent::PostStateMachineEvent(FName _eventName)
 }
 
 
-void UStateMachineComponent::DebugDisplayCurrentStates(const FColor& _color)
+void UHierarchicalStateMachine::DebugDisplayCurrentStates(const FColor& _color)
 {
 	if (GEngine)
 	{
@@ -315,7 +277,52 @@ void UStateMachineComponent::DebugDisplayCurrentStates(const FColor& _color)
 	}
 }
 
-bool UStateMachineComponent::_VisitTrack(Track* _track, TrackVisitorDelegate _trackVisitor, StateVisitorDelegate _stateVisitor)
+void UHierarchicalStateMachine::SerializeCurrentStates(TArray<FString>& _outStates)
+{
+	STATEMACHINE_ASSERT(!m_ticking);
+
+	for (State* state : m_currentStates)
+	{
+		_outStates.Add(state->GetName().ToString());
+	}
+}
+
+void UHierarchicalStateMachine::DeserializeCurrentStates(const TArray<FString>& _states)
+{
+	STATEMACHINE_ASSERT(!m_ticking);
+
+	TArray<State*> states;
+	for (const FString& state : _states)
+	{
+		State** statePtr = m_states.Find(FName(*state));
+		if (!statePtr)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Deserializing unknown State, aborting."));
+			return;
+		}
+		states.Add(*statePtr);
+	}
+
+	for (int i = m_currentStates.Num() - 1; i >= 0; --i)
+	{
+		m_currentStates[i]->Exit.ExecuteIfBound();
+
+#if STATEMACHINE_HISTORY_ENABLED 
+		_LogStateExited(m_currentStates[i]);
+#endif
+	}
+
+	m_currentStates = states;
+	for (auto state : m_currentStates)
+	{
+		state->Enter.ExecuteIfBound();
+#if STATEMACHINE_HISTORY_ENABLED 
+		_LogStateEntered(state);
+#endif
+	}
+}
+
+bool UHierarchicalStateMachine::_VisitTrack(Track* _track, TrackVisitorDelegate _trackVisitor, StateVisitorDelegate _stateVisitor)
 {
 	if (!_trackVisitor.Execute(_track))
 	{
@@ -333,7 +340,7 @@ bool UStateMachineComponent::_VisitTrack(Track* _track, TrackVisitorDelegate _tr
 }
 
 
-bool UStateMachineComponent::_VisitState(State* _state, TrackVisitorDelegate _trackVisitor, StateVisitorDelegate _stateVisitor)
+bool UHierarchicalStateMachine::_VisitState(State* _state, TrackVisitorDelegate _trackVisitor, StateVisitorDelegate _stateVisitor)
 {
 	if (!_stateVisitor.Execute(_state))
 	{
@@ -350,20 +357,20 @@ bool UStateMachineComponent::_VisitState(State* _state, TrackVisitorDelegate _tr
 	return true;
 }
 
-bool UStateMachineComponent::_AssertIfTrackExists(Track* _track)
+bool UHierarchicalStateMachine::_AssertIfTrackExists(Track* _track)
 {
 	STATEMACHINE_ASSERTF(m_tracks.Find(_track->m_name) == nullptr, TEXT("A Track with the name \"%s\" already exists."), *_track->m_name.GetPlainNameString());
 	return true;
 }
 
-bool UStateMachineComponent::_AssertIfStateExists(State * _state)
+bool UHierarchicalStateMachine::_AssertIfStateExists(State * _state)
 {
 	STATEMACHINE_ASSERTF(m_states.Find(_state->m_name) == nullptr, TEXT("A State with the name \"%s\" already exists."), *_state->m_name.GetPlainNameString());
 	return true;
 }
 
 
-UStateMachineComponent::Track* UStateMachineComponent::_FindClosestCommonTrack(const State* _stateA, const State* _stateB)
+UHierarchicalStateMachine::Track* UHierarchicalStateMachine::_FindClosestCommonTrack(const State* _stateA, const State* _stateB)
 {
 	if (_stateA->m_stateMachine != _stateB->m_stateMachine)
 		return nullptr;
@@ -405,7 +412,7 @@ UStateMachineComponent::Track* UStateMachineComponent::_FindClosestCommonTrack(c
 	return nullptr;
 }
 
-void UStateMachineComponent::DequeueEvents(uint16 _dequeuedEventsLimit)
+void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 {
 	if (_dequeuedEventsLimit == -1)
 		_dequeuedEventsLimit = STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT;
@@ -500,7 +507,7 @@ void UStateMachineComponent::DequeueEvents(uint16 _dequeuedEventsLimit)
 
 #if STATEMACHINE_HISTORY_ENABLED 
 
-void UStateMachineComponent::_LogStateMachineStarted()
+void UHierarchicalStateMachine::_LogStateMachineStarted()
 {
 	HistoryEntry entry;
 	entry.type = HistoryEntryType_StateMachineStarted;
@@ -512,7 +519,7 @@ void UStateMachineComponent::_LogStateMachineStarted()
 #endif
 }
 
-void UStateMachineComponent::_LogStateMachineStopped()
+void UHierarchicalStateMachine::_LogStateMachineStopped()
 {
 	HistoryEntry entry;
 	entry.type = HistoryEntryType_StateMachineStopped;
@@ -524,7 +531,7 @@ void UStateMachineComponent::_LogStateMachineStopped()
 #endif
 }
 
-void UStateMachineComponent::_LogStateEntered(State* _state)
+void UHierarchicalStateMachine::_LogStateEntered(State* _state)
 {
 	HistoryEntry entry;
 	entry.type = HistoryEntryType_StateEntered;
@@ -537,7 +544,7 @@ void UStateMachineComponent::_LogStateEntered(State* _state)
 #endif
 }
 
-void UStateMachineComponent::_LogStateExited(State* _state)
+void UHierarchicalStateMachine::_LogStateExited(State* _state)
 {
 	HistoryEntry entry;
 	entry.type = HistoryEntryType_StateExited;
@@ -550,7 +557,7 @@ void UStateMachineComponent::_LogStateExited(State* _state)
 #endif
 }
 
-void UStateMachineComponent::_LogEventPushed(FName _name)
+void UHierarchicalStateMachine::_LogEventPushed(FName _name)
 {
 	HistoryEntry entry;
 	entry.type = HistoryEntryType_EventPushed;
@@ -563,7 +570,7 @@ void UStateMachineComponent::_LogEventPushed(FName _name)
 #endif
 }
 
-void UStateMachineComponent::_LogEventPopped(FName _name)
+void UHierarchicalStateMachine::_LogEventPopped(FName _name)
 {
 	HistoryEntry entry;
 	entry.type = HistoryEntryType_EventPopped;

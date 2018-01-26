@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "StateMachineComponent.generated.h"
+#include "HierarchicalStateMachine.generated.h"
 
 #define STATEMACHINE_ASSERT(cond) check(cond)
 #define STATEMACHINE_ASSERTF(cond, fmt, ...) checkf(cond, fmt, __VA_ARGS__)
@@ -18,7 +18,7 @@
 #define PRINT_HISTORY_IN_LOG 0
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class STATEMACHINE_API UStateMachineComponent : public UActorComponent
+class STATEMACHINE_API UHierarchicalStateMachine : public UObject
 {
 	GENERATED_BODY()
 
@@ -35,7 +35,7 @@ public:
 
 	class STATEMACHINE_API Track
 	{
-		friend class UStateMachineComponent;
+		friend class UHierarchicalStateMachine;
 		friend class State;
 	public:
 		State* AddState(FName _name);
@@ -47,19 +47,19 @@ public:
 		FORCEINLINE const FName& GetName() const { return m_name; }
 
 	private:
-		Track(FName _name, State* _parent, UStateMachineComponent* _stateMachine);
+		Track(FName _name, State* _parent, UHierarchicalStateMachine* _stateMachine);
 		~Track();
 
 		FName m_name;
 		TMap<FName, State*> m_states;
 		State* m_parent = nullptr;
 		State* m_defaultState = nullptr;
-		UStateMachineComponent* m_stateMachine = nullptr;
+		UHierarchicalStateMachine* m_stateMachine = nullptr;
 	};
 
 	class STATEMACHINE_API State
 	{
-		friend class UStateMachineComponent;
+		friend class UHierarchicalStateMachine;
 		friend class State;
 	public:
 		StateEnterDelegate Enter;
@@ -74,34 +74,30 @@ public:
 		FORCEINLINE const FName& GetName() const { return m_name; }
 
 	private:
-		State(FName _name, Track* _parent, UStateMachineComponent* _stateMachine);
+		State(FName _name, Track* _parent, UHierarchicalStateMachine* _stateMachine);
 		~State();
 
 		FName m_name;
 		TMap<FName, Track*> m_tracks;
 		Track* m_parent;
-		UStateMachineComponent* m_stateMachine;
+		UHierarchicalStateMachine* m_stateMachine;
 	};
 
 public:	
-	UStateMachineComponent();
-	~UStateMachineComponent();
+	UHierarchicalStateMachine();
+	~UHierarchicalStateMachine();
 
 	Track* AddRootTrack(FName _name);
 	Track* AddRootTrack(Track* _track);
 
 	void AddEventTransition(FName _eventName, FName _sourceStateName, FName _targetStateName);
 
-	virtual void BeginPlay() override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-	void StartStateMachine();
-	void TickStateMachine(float _dt);
-	void StopStateMachine();
+	void Start();
+	void Tick(float _dt);
+	void Stop();
 	void DequeueEvents(uint16 _dequeuedEventsLimit = -1);
 
-	void PostStateMachineEvent(FName _eventName);
+	void PostEvent(FName _eventName);
 
 	FORCEINLINE const TArray<State*>& GetCurrentStates() const { return m_currentStates; }
 
@@ -109,10 +105,10 @@ public:
 
 	void DebugDisplayCurrentStates(const FColor& _color);
 
+	void SerializeCurrentStates(TArray<FString>& _outStates);
+	void DeserializeCurrentStates(const TArray<FString>& _states);
+
 public:
-	bool bAutoStartStateMachine : 1;
-	bool bAutoStopStateMachine : 1;
-	bool bAutoTickStateMachine : 1;
 	bool bImmediatelyDequeueEvents : 1;
 
 private:
@@ -184,13 +180,13 @@ private:
 // DEFINITION HELPERS
 // ==================
 
-#define STATEMACHINE_DEFINITION(StateMachineComponentPointer)\
+#define STATEMACHINE_DEFINITION(HierarchicalStateMachinePointer)\
 	{\
-	UStateMachineComponent* __UStateMachineComponent = StateMachineComponentPointer;\
-	TArray<UStateMachineComponent::Track*> __trackStack;\
-	TArray<UStateMachineComponent::State*> __stateStack;\
-	UStateMachineComponent::Track* __track;\
-	UStateMachineComponent::State* __state;\
+	UHierarchicalStateMachine* __hierarchicalStateMachine = HierarchicalStateMachinePointer;\
+	TArray<UHierarchicalStateMachine::Track*> __trackStack;\
+	TArray<UHierarchicalStateMachine::State*> __stateStack;\
+	UHierarchicalStateMachine::Track* __track;\
+	UHierarchicalStateMachine::State* __state;\
 	_STATEMACHINE_DEFINITION_CONTENT
 
 
@@ -230,7 +226,7 @@ private:
 #define TRACK(TrackName)\
 	if (__stateStack.Num() == 0)\
 	{\
-		__track = __UStateMachineComponent->AddRootTrack(TEXT(#TrackName));\
+		__track = __hierarchicalStateMachine->AddRootTrack(TEXT(#TrackName));\
 	}\
 	else\
 	{\
@@ -247,4 +243,4 @@ private:
 
 // NOTE: so far, I think event should be passed as string literals, since it will passed that way on the non-macro API
 #define TRANSITION_EVENT(eventName, sourceState, targetState)\
-	__UStateMachineComponent->AddEventTransition(eventName, #sourceState, #targetState)
+	__hierarchicalStateMachine->AddEventTransition(eventName, #sourceState, #targetState)
