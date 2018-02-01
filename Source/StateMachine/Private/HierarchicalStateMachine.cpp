@@ -421,7 +421,8 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 	while ((dequeuedEventsCount < _dequeuedEventsLimit) && m_eventsQueue.Num() != 0)
 	{
 		++dequeuedEventsCount;
-		FName evt = m_eventsQueue.Pop();
+		FName evt = m_eventsQueue[0];
+		m_eventsQueue.RemoveAt(0);
 #if STATEMACHINE_HISTORY_ENABLED
 		_LogEventPopped(evt);
 #endif
