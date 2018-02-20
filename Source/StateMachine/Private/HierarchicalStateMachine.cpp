@@ -207,6 +207,8 @@ void UHierarchicalStateMachine::Tick(float _dt)
 	STATEMACHINE_ASSERT(IsStarted());
 	STATEMACHINE_ASSERT(!m_ticking);
 
+	DequeueEvents();
+
 	m_ticking = true;
 	for (State* state : m_currentStates)
 	{
