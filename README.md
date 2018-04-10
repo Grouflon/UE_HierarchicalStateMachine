@@ -13,7 +13,7 @@ UPROPERTY(Instanced) UHierarchicalStateMachine* m_stateMachine;
 ### Definition
 ```C++
 m_stateMachine = CreateDefaultSubobject<UHierarchicalStateMachine>(TEXT("stateMachine"));
-STATEMACHINE_DEFINITION(m_sstateMachine)
+STATEMACHINE_DEFINITION(m_stateMachine)
 (
   TRACK(RootTrack) // First level of the state machine must contain Tracks and not States. It can contain several Tracks
   (
@@ -49,5 +49,18 @@ STATEMACHINE_DEFINITION(m_sstateMachine)
   TRANSITION_EVENT("EventName2", SubState2, SubState1); // Transition must declared from one state to another
 );
 ```
+
+### Usage
+```C++
+m_stateMachine->Start();        // Starts State Machine, enters all defaults states from the highest to the deepests
+m_stateMachine->Tick(DeltaTime) // Dequeue events, enter/exit states accordingly, ticks all current states, Dequeue events again and enter/exit states accordingly
+m_stateMachine->Stop();         // Stops State Machine, exits all current states from the deepests to the highest
+
+m_stateMachine->PostEvent("EventName"); // Post an event that may result in a state transition.
+
+m_stateMachine->bImmediatelyDequeueEvents = true; // Sets the state machine to dequeue events immediately during a PostEvent calls
+
+```
+
 # References
 This state machine is greatly inspired and loosely adapted from [this work](http://www.wiwila.com/tools/phantom/documentation/state-machines/).
