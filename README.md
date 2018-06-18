@@ -1,5 +1,4 @@
 # TODO:
-- Transitions Between Tracks and States
 - Bump Events (if an event happens during a State, it is just added back to the queue)
 - Make the state machine definition a shared asset
 - Precompute route between states defines by events (no more route search at runtime)
@@ -21,14 +20,14 @@ STATEMACHINE_DEFINITION(m_stateMachine)
     // is entered in the track if the transition does not define a specific destination state
     DEFAULT_STATE(State1) 
     (
-      STATE_ENTER(this, &MyClass::State1_Enter);  // this is just delegates to you class methods
+      STATE_ENTER(this, &MyClass::State1_Enter);  // these are just delegates to you class methods
       STATE_TICK(this, &MyClass::State1_Tick);    // function prototype for TICK is void(float) the parameter is dt
       STATE_EXIT(this, &MyClass::State1_Exit);    // function prototype for ENTER/EXIT is void()
     );
         
     STATE(State2)
     (
-      STATE_TICK(this, &MyClass::State2_Tick); //You can only declare the function you need between ENTER TICK & EXIT
+      STATE_TICK(this, &MyClass::State2_Tick); //You can just declare the function you need between ENTER TICK & EXIT
           
       TRACK(SubTrack1) // Every State can have several tracks, Every Track can have several States
       (
@@ -47,6 +46,7 @@ STATEMACHINE_DEFINITION(m_stateMachine)
 
   TRANSITION_EVENT("EventName", SubState2, State1);
   TRANSITION_EVENT("EventName2", SubState2, SubState1); // Transition must declared from one state to another
+  TRANSITION_EVENT("EventName2", Track, SubState1); // Transition can also be declared from a track to a state
 );
 ```
 
@@ -63,4 +63,4 @@ m_stateMachine->bImmediatelyDequeueEvents = true; // Sets the state machine to d
 ```
 
 # References
-This state machine is greatly inspired and loosely adapted from [this work](http://www.wiwila.com/tools/phantom/documentation/state-machines/).
+This state machine is greatly inspired and loosely adapted from [Wiwila's work on State Machines](http://www.wiwila.com/tools/phantom/documentation/state-machines/).

@@ -18,7 +18,7 @@
 #define PRINT_HISTORY_IN_LOG 0
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class STATEMACHINE_API UHierarchicalStateMachine : public UObject
+class STATEMACHINERUNTIME_API UHierarchicalStateMachine : public UObject
 {
 	GENERATED_BODY()
 
@@ -33,7 +33,7 @@ public:
 	friend class Track;
 	friend class State;
 
-	class STATEMACHINE_API Track
+	class STATEMACHINERUNTIME_API Track
 	{
 		friend class UHierarchicalStateMachine;
 		friend class State;
@@ -50,6 +50,8 @@ public:
 		Track(FName _name, State* _parent, UHierarchicalStateMachine* _stateMachine);
 		~Track();
 
+		void _AssignIndices(uint16& _index);
+
 		FName m_name;
 		TMap<FName, State*> m_states;
 		State* m_parent = nullptr;
@@ -57,7 +59,7 @@ public:
 		UHierarchicalStateMachine* m_stateMachine = nullptr;
 	};
 
-	class STATEMACHINE_API State
+	class STATEMACHINERUNTIME_API State
 	{
 		friend class UHierarchicalStateMachine;
 		friend class State;
@@ -68,10 +70,12 @@ public:
 
 		Track* AddTrack(FName _name);
 
-		bool IsInTrack(const Track* _track);
+		bool IsInTrack(const Track* _track) const;
+		bool IsInState(const State* _state) const;
 
 		FORCEINLINE Track* GetParentTrack() const { return m_parent; }
 		FORCEINLINE const FName& GetName() const { return m_name; }
+		FORCEINLINE uint16 GetIndex() const { return m_index; }
 
 	private:
 		State(FName _name, Track* _parent, UHierarchicalStateMachine* _stateMachine);
@@ -81,6 +85,7 @@ public:
 		TMap<FName, Track*> m_tracks;
 		Track* m_parent;
 		UHierarchicalStateMachine* m_stateMachine;
+		uint16 m_index = 0;
 	};
 
 public:	
@@ -90,7 +95,7 @@ public:
 	Track* AddRootTrack(FName _name);
 	Track* AddRootTrack(Track* _track);
 
-	void AddEventTransition(FName _eventName, FName _sourceStateName, FName _targetStateName);
+	void AddEventTransition(FName _eventName, FName _sourceName, FName _targetStateName);
 
 	void Start();
 	void Tick(float _dt);
@@ -120,13 +125,15 @@ private:
 	bool _AssertIfTrackExists(Track* _track);
 	bool _AssertIfStateExists(State* _track);
 
+	void _AssignIndices();
 	Track* _FindClosestCommonTrack(const State* _stateA, const State* _stateB);
 
 	struct EventTransition
 	{
 		FName name;
-		State* source = nullptr;
-		State* target = nullptr;
+		Track* sourceTrack = nullptr;
+		State* sourceState = nullptr;
+		State* targetState = nullptr;
 	};
 
 	TArray<Track*> m_rootTracks;
