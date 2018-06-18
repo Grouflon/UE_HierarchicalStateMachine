@@ -46,7 +46,7 @@ STATEMACHINE_DEFINITION(m_stateMachine)
 
   TRANSITION_EVENT("EventName", SubState2, State1);
   TRANSITION_EVENT("EventName2", SubState2, SubState1); // Transition must declared from one state to another
-  TRANSITION_EVENT("EventName2", Track, SubState1); // Transition can also be declared from a track to a state
+  TRANSITION_EVENT("EventName3", Track, SubState1); // Transition can also be declared from a track to a state
 );
 ```
 
