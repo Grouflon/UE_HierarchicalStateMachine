@@ -477,7 +477,7 @@ UHierarchicalStateMachine::Track* UHierarchicalStateMachine::_FindClosestCommonT
 		{
 			return ATracks[i];
 		}
-		currentTrack = currentTrack->m_parent->m_parent;
+		currentTrack = currentTrack->m_parent ? currentTrack->m_parent->m_parent : nullptr;
 	}
 
 	return nullptr;

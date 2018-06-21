@@ -249,6 +249,24 @@ void UTestClass::E2_Exit()
 		History.Add(TEXT("E2_Exit"));
 }
 
+void UTestClass::F1_Enter()
+{
+	if (bRecord)
+		History.Add(TEXT("F1_Enter"));
+}
+
+void UTestClass::F1_Tick(float _dt)
+{
+	if (bRecord)
+		History.Add(TEXT("F1_Tick"));
+}
+
+void UTestClass::F1_Exit()
+{
+	if (bRecord)
+		History.Add(TEXT("F1_Exit"));
+}
+
 // ===== TESTS =====
 
 #define TEST(cond, txt) if (!(cond)) { UE_LOG(LogTemp, Error, TEXT("%s"), TEXT(txt)); result = false; break; }
@@ -354,6 +372,16 @@ static void BuildTestStateMachine()
 			);
 		);
 
+		TRACK(F)
+		(
+			DEFAULT_STATE(F1)
+			(
+				STATE_ENTER(s_testObject, &UTestClass::F1_Enter);
+				STATE_TICK(s_testObject, &UTestClass::F1_Tick);
+				STATE_EXIT(s_testObject, &UTestClass::F1_Exit);
+			);
+		);
+
 		TRANSITION_EVENT("Event1", A1, D2);
 		TRANSITION_EVENT("Event1", E1, E2);
 		TRANSITION_EVENT("Event2", B1, B2);
@@ -391,13 +419,15 @@ bool FStateMachineDefaultStatesTest::RunTest(const FString& Parameters)
 		s_stateMachine->Start();
 		s_stateMachine->Stop();
 
-		TEST(s_testObject->History.Num() == 6, "Failed to initialize all states.");
+		TEST(s_testObject->History.Num() == 8, "Failed to initialize all states.");
 		TEST(s_testObject->History[0] == TEXT("A1_Enter"), "Invalid initialization order.");
 		TEST(s_testObject->History[1] == TEXT("C1_Enter"), "Invalid initialization order.");
 		TEST(s_testObject->History[2] == TEXT("B1_Enter"), "Invalid initialization order.");
-		TEST(s_testObject->History[3] == TEXT("B1_Exit"), "Invalid initialization order.");
-		TEST(s_testObject->History[4] == TEXT("C1_Exit"), "Invalid initialization order.");
-		TEST(s_testObject->History[5] == TEXT("A1_Exit"), "Invalid initialization order.");
+		TEST(s_testObject->History[3] == TEXT("F1_Enter"), "Invalid initialization order.");
+		TEST(s_testObject->History[4] == TEXT("F1_Exit"), "Invalid initialization order.");
+		TEST(s_testObject->History[5] == TEXT("B1_Exit"), "Invalid initialization order.");
+		TEST(s_testObject->History[6] == TEXT("C1_Exit"), "Invalid initialization order.");
+		TEST(s_testObject->History[7] == TEXT("A1_Exit"), "Invalid initialization order.");
 	}
 	while (false);
 
@@ -433,11 +463,12 @@ bool FStateMachineTransitionsTest::RunTest(const FString& Parameters)
 
 		s_stateMachine->Stop();
 
-		TEST(s_testObject->History.Num() == 4, "Incorrect Exit Order.");
-		TEST(s_testObject->History[0] == TEXT("E1_Exit"), "Incorrect Exit Order.");
-		TEST(s_testObject->History[1] == TEXT("B2_Exit"), "Incorrect Exit Order.");
-		TEST(s_testObject->History[2] == TEXT("D2_Exit"), "Incorrect Exit Order.");
-		TEST(s_testObject->History[3] == TEXT("A2_Exit"), "Incorrect Exit Order.");
+		TEST(s_testObject->History.Num() == 5, "Incorrect Exit Order.");
+		TEST(s_testObject->History[0] == TEXT("F1_Exit"), "Incorrect Exit Order.");
+		TEST(s_testObject->History[1] == TEXT("E1_Exit"), "Incorrect Exit Order.");
+		TEST(s_testObject->History[2] == TEXT("B2_Exit"), "Incorrect Exit Order.");
+		TEST(s_testObject->History[3] == TEXT("D2_Exit"), "Incorrect Exit Order.");
+		TEST(s_testObject->History[4] == TEXT("A2_Exit"), "Incorrect Exit Order.");
 		
 	} while (false);
 
@@ -457,29 +488,32 @@ bool FStateMachineTickOrderTest::RunTest(const FString& Parameters)
 		s_testObject->bRecord = true;
 
 		s_stateMachine->Tick(0.f);
-		TEST(s_testObject->History.Num() == 3, "Incorrect Tick Sequence.");
+		TEST(s_testObject->History.Num() == 4, "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[0] == TEXT("A1_Tick"), "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[1] == TEXT("C1_Tick"), "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[2] == TEXT("B1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[3] == TEXT("F1_Tick"), "Incorrect Tick Sequence.");
 
 		s_stateMachine->PostEvent("Event1");
-		s_testObject->History.Empty();
-
-		s_stateMachine->Tick(0.f);
-		TEST(s_testObject->History.Num() == 3, "Incorrect Tick Sequence.");
-		TEST(s_testObject->History[0] == TEXT("A2_Tick"), "Incorrect Tick Sequence.");
-		TEST(s_testObject->History[1] == TEXT("D2_Tick"), "Incorrect Tick Sequence.");
-		TEST(s_testObject->History[2] == TEXT("B1_Tick"), "Incorrect Tick Sequence.");
-
-		s_stateMachine->PostEvent("Event2");
 		s_testObject->History.Empty();
 
 		s_stateMachine->Tick(0.f);
 		TEST(s_testObject->History.Num() == 4, "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[0] == TEXT("A2_Tick"), "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[1] == TEXT("D2_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[2] == TEXT("B1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[3] == TEXT("F1_Tick"), "Incorrect Tick Sequence.");
+
+		s_stateMachine->PostEvent("Event2");
+		s_testObject->History.Empty();
+
+		s_stateMachine->Tick(0.f);
+		TEST(s_testObject->History.Num() == 5, "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[0] == TEXT("A2_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[1] == TEXT("D2_Tick"), "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[2] == TEXT("B2_Tick"), "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[3] == TEXT("E1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[4] == TEXT("F1_Tick"), "Incorrect Tick Sequence.");
 
 		s_stateMachine->Stop();
 
