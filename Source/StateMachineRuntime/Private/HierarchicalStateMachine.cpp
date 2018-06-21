@@ -314,7 +314,7 @@ void UHierarchicalStateMachine::PostEvent(FName _eventName)
 #if STATEMACHINE_HISTORY_ENABLED 
 	_LogEventPushed(_eventName);
 #endif
-	if (bImmediatelyDequeueEvents && !m_ticking && IsStarted())
+	if (bImmediatelyDequeueEvents && !m_ticking && IsStarted() && !m_isDequeuingEvents)
 	{
 		DequeueEvents();
 	}
@@ -485,6 +485,8 @@ UHierarchicalStateMachine::Track* UHierarchicalStateMachine::_FindClosestCommonT
 
 void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 {
+	m_isDequeuingEvents = true;
+
 	if (_dequeuedEventsLimit == -1)
 		_dequeuedEventsLimit = STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT;
 
@@ -499,6 +501,10 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 #endif
 		const TArray<EventTransition*>& transitions = *m_eventTransitions.Find(evt);
 
+		// OPTIM: could be member arrays in order to limit allocations
+		TArray<State*> exitingStates;
+		TArray<State*> enteringStates;
+
 		for (const EventTransition* transition : transitions)
 		{
 			if (m_currentStates.Find(transition->targetState) != INDEX_NONE)
@@ -507,8 +513,8 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 			if (transition->sourceState && m_currentStates.Find(transition->sourceState) == INDEX_NONE)
 				continue;
 
-			m_tempExitingStates.Empty();
-			m_tempEnteringStates.Empty();
+			exitingStates.Empty();
+			enteringStates.Empty();
 
 			Track* commonTrack = transition->sourceTrack;
 			if (!commonTrack)
@@ -525,19 +531,19 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 				if (transition->targetState->IsInState(state))
 					continue;
 
-				m_tempExitingStates.Add(state);
+				exitingStates.Add(state);
 			}
 
 			// No exiting states means transition is irrelevant
-			if (m_tempExitingStates.Num() == 0)
+			if (exitingStates.Num() == 0)
 				continue;
 
-			m_tempEnteringStates.Add(transition->targetState);
-			for (int i = 0; i < m_tempEnteringStates.Num(); ++i)
+			enteringStates.Add(transition->targetState);
+			for (int i = 0; i < enteringStates.Num(); ++i)
 			{
-				for (auto& trackPair : m_tempEnteringStates[i]->m_tracks)
+				for (auto& trackPair : enteringStates[i]->m_tracks)
 				{
-					m_tempEnteringStates.Add(trackPair.Value->m_defaultState);
+					enteringStates.Add(trackPair.Value->m_defaultState);
 				}
 			}
 
@@ -546,15 +552,15 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 				while (ascendingState->GetParentTrack() && ascendingState->GetParentTrack()->GetParentState() && m_currentStates.Find(ascendingState->GetParentTrack()->GetParentState()) == INDEX_NONE)
 				{
 					ascendingState = ascendingState->GetParentTrack()->GetParentState();
-					m_tempEnteringStates.Add(ascendingState);
+					enteringStates.Add(ascendingState);
 				}
 			}
 
-			m_tempExitingStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() > _stateB.GetIndex(); });
-			m_tempEnteringStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
+			exitingStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() > _stateB.GetIndex(); });
+			enteringStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
 
 			// Exiting states
-			for (State* state : m_tempExitingStates)
+			for (State* state : exitingStates)
 			{
 				state->Exit.ExecuteIfBound();
 #if STATEMACHINE_HISTORY_ENABLED 
@@ -564,7 +570,7 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 			}
 
 			// Entering states
-			for (State* state : m_tempEnteringStates)
+			for (State* state : enteringStates)
 			{
 				state->Enter.ExecuteIfBound();
 #if STATEMACHINE_HISTORY_ENABLED 
@@ -581,6 +587,8 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 	{
 		UE_LOG(LogTemp, Error, TEXT("[StateMachine] Stopped events dequeuing after having dequeued more than %d events. There may be an infinite events loop somewhere."), STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT);
 	}
+
+	m_isDequeuingEvents = false;
 }
 
 #if STATEMACHINE_HISTORY_ENABLED 
