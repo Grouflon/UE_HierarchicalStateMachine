@@ -38,6 +38,12 @@ public:
 	void B2_Enter();
 	void B2_Tick(float _dt);
 	void B2_Exit();
+	void B3_Enter();
+	void B3_Tick(float _dt);
+	void B3_Exit();
+	void B4_Enter();
+	void B4_Tick(float _dt);
+	void B4_Exit();
 
 	void C1_Enter();
 	void C1_Tick(float _dt);

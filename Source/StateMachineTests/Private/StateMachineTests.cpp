@@ -105,6 +105,42 @@ void UTestClass::B2_Exit()
 		History.Add(TEXT("B2_Exit"));
 }
 
+void UTestClass::B3_Enter()
+{
+	if (bRecord)
+		History.Add(TEXT("B3_Enter"));
+}
+
+void UTestClass::B3_Tick(float _dt)
+{
+	if (bRecord)
+		History.Add(TEXT("B3_Tick"));
+}
+
+void UTestClass::B3_Exit()
+{
+	if (bRecord)
+		History.Add(TEXT("B3_Exit"));
+}
+
+void UTestClass::B4_Enter()
+{
+	if (bRecord)
+		History.Add(TEXT("B4_Enter"));
+}
+
+void UTestClass::B4_Tick(float _dt)
+{
+	if (bRecord)
+		History.Add(TEXT("B4_Tick"));
+}
+
+void UTestClass::B4_Exit()
+{
+	if (bRecord)
+		History.Add(TEXT("B4_Exit"));
+}
+
 void UTestClass::C1_Enter()
 {
 	if (bRecord)
@@ -304,11 +340,24 @@ static void BuildTestStateMachine()
 					);
 				);
 			);
+			STATE(B3)
+			(
+				STATE_ENTER(s_testObject, &UTestClass::B3_Enter);
+				STATE_TICK(s_testObject, &UTestClass::B3_Tick);
+				STATE_EXIT(s_testObject, &UTestClass::B3_Exit);
+			);
+			STATE(B4)
+			(
+				STATE_ENTER(s_testObject, &UTestClass::B4_Enter);
+				STATE_TICK(s_testObject, &UTestClass::B4_Tick);
+				STATE_EXIT(s_testObject, &UTestClass::B4_Exit);
+			);
 		);
 
 		TRANSITION_EVENT("Event1", A1, D2);
 		TRANSITION_EVENT("Event1", E1, E2);
 		TRANSITION_EVENT("Event2", B1, B2);
+		TRANSITION_EVENT("Event2", B3, B4);
 
 		TRANSITION_EVENT("TrackTransition1", C, C2);
 		TRANSITION_EVENT("TrackTransition2", A, D2);

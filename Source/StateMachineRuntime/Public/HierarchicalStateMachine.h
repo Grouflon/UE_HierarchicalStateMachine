@@ -144,6 +144,9 @@ private:
 
 	TMap<FName, TArray<EventTransition*>> m_eventTransitions;
 	TArray<FName> m_eventsQueue;
+
+	TArray<State*> m_tempEnteringStates;
+	TArray<State*> m_tempExitingStates;
 	
 	bool m_ticking = false;
 	bool m_started = false;

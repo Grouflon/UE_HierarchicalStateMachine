@@ -499,16 +499,16 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 #endif
 		const TArray<EventTransition*>& transitions = *m_eventTransitions.Find(evt);
 
-		TArray<State*> exitingStates;
-		TArray<State*> enteringStates;
-
 		for (const EventTransition* transition : transitions)
 		{
 			if (m_currentStates.Find(transition->targetState) != INDEX_NONE)
 				continue;
 
-			exitingStates.Empty();
-			enteringStates.Empty();
+			if (transition->sourceState && m_currentStates.Find(transition->sourceState) == INDEX_NONE)
+				continue;
+
+			m_tempExitingStates.Empty();
+			m_tempEnteringStates.Empty();
 
 			Track* commonTrack = transition->sourceTrack;
 			if (!commonTrack)
@@ -525,19 +525,19 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 				if (transition->targetState->IsInState(state))
 					continue;
 
-				exitingStates.Add(state);
+				m_tempExitingStates.Add(state);
 			}
 
 			// No exiting states means transition is irrelevant
-			if (exitingStates.Num() == 0)
+			if (m_tempExitingStates.Num() == 0)
 				continue;
 
-			enteringStates.Add(transition->targetState);
-			for (int i = 0; i < enteringStates.Num(); ++i)
+			m_tempEnteringStates.Add(transition->targetState);
+			for (int i = 0; i < m_tempEnteringStates.Num(); ++i)
 			{
-				for (auto& trackPair : enteringStates[i]->m_tracks)
+				for (auto& trackPair : m_tempEnteringStates[i]->m_tracks)
 				{
-					enteringStates.Add(trackPair.Value->m_defaultState);
+					m_tempEnteringStates.Add(trackPair.Value->m_defaultState);
 				}
 			}
 
@@ -546,15 +546,15 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 				while (ascendingState->GetParentTrack() && ascendingState->GetParentTrack()->GetParentState() && m_currentStates.Find(ascendingState->GetParentTrack()->GetParentState()) == INDEX_NONE)
 				{
 					ascendingState = ascendingState->GetParentTrack()->GetParentState();
-					enteringStates.Add(ascendingState);
+					m_tempEnteringStates.Add(ascendingState);
 				}
 			}
 
-			exitingStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() > _stateB.GetIndex(); });
-			enteringStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
+			m_tempExitingStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() > _stateB.GetIndex(); });
+			m_tempEnteringStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
 
 			// Exiting states
-			for (State* state : exitingStates)
+			for (State* state : m_tempExitingStates)
 			{
 				state->Exit.ExecuteIfBound();
 #if STATEMACHINE_HISTORY_ENABLED 
@@ -564,7 +564,7 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 			}
 
 			// Entering states
-			for (State* state : enteringStates)
+			for (State* state : m_tempEnteringStates)
 			{
 				state->Enter.ExecuteIfBound();
 #if STATEMACHINE_HISTORY_ENABLED 
@@ -575,93 +575,6 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 
 			m_currentStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
 		}
-		
-
-		// OPTIM: could be member arrays in order to limit allocations
-		/*TArray<State*> pathFromCommonTrackToState;
-		TArray<Track*> tracksToSet;
-
-		for (const EventTransition* transition : transitions)
-		{
-			if (m_currentStates.Find(transition->sourceState) == INDEX_NONE)
-			{
-				continue;
-			}
-
-			pathFromCommonTrackToState.Empty();
-			tracksToSet.Empty();
-
-			// OPTIM: don't need the two loops
-			Track* commonTrack = _FindClosestCommonTrack(transition->sourceState, transition->target);
-
-			// find path from common track to target state
-			pathFromCommonTrackToState.Insert(transition->target, 0);
-			{
-				Track* currentTrack = transition->target->m_parent;
-				while (currentTrack != commonTrack)
-				{
-					pathFromCommonTrackToState.Insert(currentTrack->m_parent, 0);
-					currentTrack = currentTrack->m_parent->m_parent;
-				}
-			}
-
-			// End exiting tracks
-			for (int i = m_currentStates.Num() - 1; i >= 0; --i)
-			{
-				if (m_currentStates[i]->IsInTrack(commonTrack))
-				{
-					m_currentStates[i]->Exit.ExecuteIfBound();
-#if STATEMACHINE_HISTORY_ENABLED 
-					_LogStateExited(m_currentStates[i]);
-#endif
-					m_currentStates.RemoveAt(i);
-				}
-			}
-
-			// Go down new state tree
-			tracksToSet.Add(commonTrack);
-			while (tracksToSet.Num() != 0)
-			{
-				Track* currentTrack = tracksToSet.Pop();
-				State* currentState = currentTrack->m_defaultState;
-
-				if (pathFromCommonTrackToState.Num() != 0)
-				{
-					State** result = currentTrack->m_states.Find(pathFromCommonTrackToState[0]->m_name);
-					if (result)
-					{
-						currentState = *result;
-						pathFromCommonTrackToState.RemoveAt(0);
-					}
-				}
-
-				currentState->Enter.ExecuteIfBound();
-#if STATEMACHINE_HISTORY_ENABLED 
-				_LogStateEntered(currentState);
-#endif
-
-				// Insert state at right index
-				bool inserted = false;
-				for (int i = 0; i < m_currentStates.Num(); ++i)
-				{
-					if (currentState->m_index < m_currentStates[i]->m_index)
-					{
-						m_currentStates.Insert(currentState, i);
-						inserted = true;
-						break;
-					}
-				}
-				if (!inserted)
-				{
-					m_currentStates.Add(currentState);
-				}
-
-				for (auto& pair : currentState->m_tracks)
-				{
-					tracksToSet.Add(pair.Value);
-				}
-			}
-		}*/
 	}
 
 	if (dequeuedEventsCount >= STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT)
