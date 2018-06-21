@@ -528,6 +528,10 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 				exitingStates.Add(state);
 			}
 
+			// No exiting states means transition is irrelevant
+			if (exitingStates.Num() == 0)
+				continue;
+
 			enteringStates.Add(transition->targetState);
 			for (int i = 0; i < enteringStates.Num(); ++i)
 			{

@@ -307,6 +307,7 @@ static void BuildTestStateMachine()
 		);
 
 		TRANSITION_EVENT("Event1", A1, D2);
+		TRANSITION_EVENT("Event1", E1, E2);
 		TRANSITION_EVENT("Event2", B1, B2);
 
 		TRANSITION_EVENT("TrackTransition1", C, C2);
