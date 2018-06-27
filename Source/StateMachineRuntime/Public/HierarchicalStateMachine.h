@@ -6,8 +6,15 @@
 #include "Components/ActorComponent.h"
 #include "HierarchicalStateMachine.generated.h"
 
-#define STATEMACHINE_ASSERT(cond) check(cond)
-#define STATEMACHINE_ASSERTF(cond, fmt, ...) checkf(cond, fmt, __VA_ARGS__)
+#define STATEMACHINE_ASSERT_ENABLED 1
+
+#if STATEMACHINE_ASSERT_ENABLED 
+	#define STATEMACHINE_ASSERT(cond) check(cond)
+	#define STATEMACHINE_ASSERTF(cond, fmt, ...) checkf(cond, fmt, __VA_ARGS__)
+#else
+	#define STATEMACHINE_ASSERT(cond)
+	#define STATEMACHINE_ASSERTF(cond, fmt, ...)
+#endif
 
 #ifdef UE_EDITOR
 	#define STATEMACHINE_HISTORY_ENABLED 1

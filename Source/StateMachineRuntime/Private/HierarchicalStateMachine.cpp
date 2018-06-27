@@ -210,6 +210,13 @@ void UHierarchicalStateMachine::Start()
 	STATEMACHINE_ASSERT(!IsStarted());
 	STATEMACHINE_ASSERT(m_currentStates.Num() == 0);
 
+#if STATEMACHINE_ASSERT_ENABLED
+	for (auto& trackPair : m_tracks)
+	{
+		STATEMACHINE_ASSERTF(trackPair.Value->m_defaultState, TEXT("Track \"%s\" does not have a default state set up."), *trackPair.Value->GetName().ToString());
+	}
+#endif
+
 #if STATEMACHINE_HISTORY_ENABLED
 	_LogStateMachineStarted();
 #endif
