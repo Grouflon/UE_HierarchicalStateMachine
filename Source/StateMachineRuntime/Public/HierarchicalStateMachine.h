@@ -2,6 +2,8 @@
 
 #pragma once
 
+class UCanvas;
+
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "HierarchicalStateMachine.generated.h"
@@ -9,11 +11,14 @@
 #define STATEMACHINE_ASSERT_ENABLED 1
 
 #if STATEMACHINE_ASSERT_ENABLED 
+
 	#define STATEMACHINE_ASSERT(cond) check(cond)
-	#define STATEMACHINE_ASSERTF(cond, fmt, ...) checkf(cond, fmt, __VA_ARGS__)
+	#define STATEMACHINE_ASSERT_MSG(cond, msg) checkf(cond, msg)
+	#define STATEMACHINE_ASSERT_MSGF(cond, fmt, ...) checkf(cond, fmt, __VA_ARGS__)
 #else
 	#define STATEMACHINE_ASSERT(cond)
-	#define STATEMACHINE_ASSERTF(cond, fmt, ...)
+	#define STATEMACHINE_ASSERT_MSGF(cond, fmt, ...)
+	#define STATEMACHINE_ASSERT_MSG(cond, msg)
 #endif
 
 #ifdef UE_EDITOR
@@ -21,8 +26,6 @@
 #else
 	#define STATEMACHINE_HISTORY_ENABLED 0
 #endif
-
-#define PRINT_HISTORY_IN_LOG 0
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class STATEMACHINERUNTIME_API UHierarchicalStateMachine : public UObject
@@ -112,16 +115,21 @@ public:
 	void PostEvent(FName _eventName);
 
 	FORCEINLINE const TArray<State*>& GetCurrentStates() const { return m_currentStates; }
+	FORCEINLINE const TArray<Track*>& GetRootTracks() const { return m_rootTracks; }
 
 	FORCEINLINE bool IsStarted() const { return m_started; }
 
 	void DebugDisplayCurrentStates(const FColor& _color);
+	void DebugDisplayCurrentStates(UCanvas* _canvas, const FColor& _color);
 
 	void SerializeCurrentStates(TArray<FString>& _outStates);
 	void DeserializeCurrentStates(const TArray<FString>& _states);
 
-public:
 	bool bImmediatelyDequeueEvents : 1;
+
+#if STATEMACHINE_HISTORY_ENABLED
+	bool bPrintHistoryInLog : 1;
+#endif
 
 private:
 	DECLARE_DELEGATE_RetVal_OneParam(bool, TrackVisitorDelegate, Track*);
@@ -133,7 +141,11 @@ private:
 	bool _AssertIfStateExists(State* _track);
 
 	void _AssignIndices();
+	Track* _FindClosestCommonTrack(const Track* _trackA, const State* _stateB);
 	Track* _FindClosestCommonTrack(const State* _stateA, const State* _stateB);
+	bool _AreStatesConcurrent(const State* _stateA, const State* _stateB) const;
+
+	FString _StringifyCurrentStates() const;
 
 	struct EventTransition
 	{

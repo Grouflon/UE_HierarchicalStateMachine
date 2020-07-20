@@ -69,4 +69,12 @@ public:
 	void F1_Enter();
 	void F1_Tick(float _dt);
 	void F1_Exit();
+
+	void G1_Enter();
+	void G1_Tick(float _dt);
+	void G1_Exit();
+
+	void G2_Enter();
+	void G2_Tick(float _dt);
+	void G2_Exit();
 };

@@ -267,6 +267,42 @@ void UTestClass::F1_Exit()
 		History.Add(TEXT("F1_Exit"));
 }
 
+void UTestClass::G1_Enter()
+{
+	if (bRecord)
+		History.Add(TEXT("G1_Enter"));
+}
+
+void UTestClass::G1_Tick(float _dt)
+{
+	if (bRecord)
+		History.Add(TEXT("G1_Tick"));
+}
+
+void UTestClass::G1_Exit()
+{
+	if (bRecord)
+		History.Add(TEXT("G1_Exit"));
+}
+
+void UTestClass::G2_Enter()
+{
+	if (bRecord)
+		History.Add(TEXT("G2_Enter"));
+}
+
+void UTestClass::G2_Tick(float _dt)
+{
+	if (bRecord)
+		History.Add(TEXT("G2_Tick"));
+}
+
+void UTestClass::G2_Exit()
+{
+	if (bRecord)
+		History.Add(TEXT("G2_Exit"));
+}
+
 // ===== TESTS =====
 
 #define TEST(cond, txt) if (!(cond)) { UE_LOG(LogTemp, Error, TEXT("%s"), TEXT(txt)); result = false; break; }
@@ -324,6 +360,22 @@ static void BuildTestStateMachine()
 						STATE_ENTER(s_testObject, &UTestClass::D2_Enter);
 						STATE_TICK(s_testObject, &UTestClass::D2_Tick);
 						STATE_EXIT(s_testObject, &UTestClass::D2_Exit);
+					);
+				);
+
+				TRACK(G)
+				(
+					DEFAULT_STATE(G1)
+					(
+						STATE_ENTER(s_testObject, &UTestClass::G1_Enter);
+						STATE_TICK(s_testObject, &UTestClass::G1_Tick);
+						STATE_EXIT(s_testObject, &UTestClass::G1_Exit);
+					);
+					STATE(G2)
+					(
+						STATE_ENTER(s_testObject, &UTestClass::G2_Enter);
+						STATE_TICK(s_testObject, &UTestClass::G2_Tick);
+						STATE_EXIT(s_testObject, &UTestClass::G2_Exit);
 					);
 				);
 			);
@@ -387,8 +439,11 @@ static void BuildTestStateMachine()
 		TRANSITION_EVENT("Event2", B1, B2);
 		TRANSITION_EVENT("Event2", B3, B4);
 
+		TRANSITION_EVENT("SelfTransition", G1, G1);
+
 		TRANSITION_EVENT("TrackTransition1", C, C2);
 		TRANSITION_EVENT("TrackTransition2", A, D2);
+		TRANSITION_EVENT("TrackTransition3", A, G2);
 	);
 }
 
@@ -447,11 +502,18 @@ bool FStateMachineTransitionsTest::RunTest(const FString& Parameters)
 		s_testObject->bRecord = true;
 
 		s_stateMachine->PostEvent("Event1");
-		TEST(s_testObject->History.Num() == 4, "Incorrect Transition.");
+		TEST(s_testObject->History.Num() == 5, "Incorrect Transition.");
 		TEST(s_testObject->History[0] == TEXT("C1_Exit"), "Incorrect Transition.");
 		TEST(s_testObject->History[1] == TEXT("A1_Exit"), "Incorrect Transition.");
 		TEST(s_testObject->History[2] == TEXT("A2_Enter"), "Incorrect Transition.");
 		TEST(s_testObject->History[3] == TEXT("D2_Enter"), "Incorrect Transition.");
+		TEST(s_testObject->History[4] == TEXT("G1_Enter"), "Incorrect Transition.");
+		s_testObject->History.Empty();
+
+		s_stateMachine->PostEvent("SelfTransition");
+		TEST(s_testObject->History.Num() == 2, "Failed Self Transition.");
+		TEST(s_testObject->History[0] == TEXT("G1_Exit"), "Failed Self Transition.");
+		TEST(s_testObject->History[1] == TEXT("G1_Enter"), "Failed Self Transition.");
 		s_testObject->History.Empty();
 
 		s_stateMachine->PostEvent("Event2");
@@ -463,12 +525,13 @@ bool FStateMachineTransitionsTest::RunTest(const FString& Parameters)
 
 		s_stateMachine->Stop();
 
-		TEST(s_testObject->History.Num() == 5, "Incorrect Exit Order.");
+		TEST(s_testObject->History.Num() == 6, "Incorrect Exit Order.");
 		TEST(s_testObject->History[0] == TEXT("F1_Exit"), "Incorrect Exit Order.");
 		TEST(s_testObject->History[1] == TEXT("E1_Exit"), "Incorrect Exit Order.");
 		TEST(s_testObject->History[2] == TEXT("B2_Exit"), "Incorrect Exit Order.");
-		TEST(s_testObject->History[3] == TEXT("D2_Exit"), "Incorrect Exit Order.");
-		TEST(s_testObject->History[4] == TEXT("A2_Exit"), "Incorrect Exit Order.");
+		TEST(s_testObject->History[3] == TEXT("G1_Exit"), "Incorrect Exit Order.");
+		TEST(s_testObject->History[4] == TEXT("D2_Exit"), "Incorrect Exit Order.");
+		TEST(s_testObject->History[5] == TEXT("A2_Exit"), "Incorrect Exit Order.");
 		
 	} while (false);
 
@@ -498,22 +561,24 @@ bool FStateMachineTickOrderTest::RunTest(const FString& Parameters)
 		s_testObject->History.Empty();
 
 		s_stateMachine->Tick(0.f);
-		TEST(s_testObject->History.Num() == 4, "Incorrect Tick Sequence.");
+		TEST(s_testObject->History.Num() == 5, "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[0] == TEXT("A2_Tick"), "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[1] == TEXT("D2_Tick"), "Incorrect Tick Sequence.");
-		TEST(s_testObject->History[2] == TEXT("B1_Tick"), "Incorrect Tick Sequence.");
-		TEST(s_testObject->History[3] == TEXT("F1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[2] == TEXT("G1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[3] == TEXT("B1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[4] == TEXT("F1_Tick"), "Incorrect Tick Sequence.");
 
 		s_stateMachine->PostEvent("Event2");
 		s_testObject->History.Empty();
 
 		s_stateMachine->Tick(0.f);
-		TEST(s_testObject->History.Num() == 5, "Incorrect Tick Sequence.");
+		TEST(s_testObject->History.Num() == 6, "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[0] == TEXT("A2_Tick"), "Incorrect Tick Sequence.");
 		TEST(s_testObject->History[1] == TEXT("D2_Tick"), "Incorrect Tick Sequence.");
-		TEST(s_testObject->History[2] == TEXT("B2_Tick"), "Incorrect Tick Sequence.");
-		TEST(s_testObject->History[3] == TEXT("E1_Tick"), "Incorrect Tick Sequence.");
-		TEST(s_testObject->History[4] == TEXT("F1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[2] == TEXT("G1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[3] == TEXT("B2_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[4] == TEXT("E1_Tick"), "Incorrect Tick Sequence.");
+		TEST(s_testObject->History[5] == TEXT("F1_Tick"), "Incorrect Tick Sequence.");
 
 		s_stateMachine->Stop();
 
@@ -541,11 +606,18 @@ bool FStateMachineTrackTransitionTest::RunTest(const FString& Parameters)
 		s_testObject->History.Empty();
 
 		s_stateMachine->PostEvent("TrackTransition2");
-		TEST(s_testObject->History.Num() == 4, "Incorrect Transition.");
+		TEST(s_testObject->History.Num() == 5, "Incorrect Transition.");
 		TEST(s_testObject->History[0] == TEXT("C2_Exit"), "Incorrect Transition.");
 		TEST(s_testObject->History[1] == TEXT("A1_Exit"), "Incorrect Transition.");
 		TEST(s_testObject->History[2] == TEXT("A2_Enter"), "Incorrect Transition.");
 		TEST(s_testObject->History[3] == TEXT("D2_Enter"), "Incorrect Transition.");
+		TEST(s_testObject->History[4] == TEXT("G1_Enter"), "Incorrect Transition.");
+		s_testObject->History.Empty();
+
+		s_stateMachine->PostEvent("TrackTransition3");
+		TEST(s_testObject->History.Num() == 2, "Incorrect Transition.");
+		TEST(s_testObject->History[0] == TEXT("G1_Exit"), "Incorrect Transition.");
+		TEST(s_testObject->History[1] == TEXT("G2_Enter"), "Incorrect Transition.");
 		s_testObject->History.Empty();
 
 		s_stateMachine->Stop();

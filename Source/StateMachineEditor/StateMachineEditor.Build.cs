@@ -10,7 +10,7 @@ public class StateMachineEditor : ModuleRules
 
 		PublicIncludePaths.AddRange(
 			new string[] {
-				"StateMachineEditor/Public"
+                ModuleDirectory + "/Public"
 				// ... add public include paths required here ...
 			}
 			);
@@ -18,7 +18,7 @@ public class StateMachineEditor : ModuleRules
 
 		PrivateIncludePaths.AddRange(
 			new string[] {
-				"StateMachineEditor/Private",
+                ModuleDirectory + "/Private",
 				// ... add other private include paths required here ...
 			}
 			);

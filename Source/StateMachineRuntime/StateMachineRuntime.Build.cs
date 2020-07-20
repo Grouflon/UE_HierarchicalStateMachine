@@ -10,7 +10,7 @@ public class StateMachineRuntime : ModuleRules
 
 		PublicIncludePaths.AddRange(
 			new string[] {
-				"StateMachineRuntime/Public"
+                ModuleDirectory + "/Public"
 				// ... add public include paths required here ...
 			}
 			);
@@ -18,7 +18,7 @@ public class StateMachineRuntime : ModuleRules
 
 		PrivateIncludePaths.AddRange(
 			new string[] {
-				"StateMachineRuntime/Private",
+                ModuleDirectory + "/Private",
 				// ... add other private include paths required here ...
 			}
 			);

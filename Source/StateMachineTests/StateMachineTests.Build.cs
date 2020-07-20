@@ -10,7 +10,7 @@ public class StateMachineTests : ModuleRules
 
 		PublicIncludePaths.AddRange(
 			new string[] {
-				"StateMachineTests/Public"
+                ModuleDirectory + "/Public"
 				// ... add public include paths required here ...
 			}
 			);
@@ -18,7 +18,7 @@ public class StateMachineTests : ModuleRules
 
 		PrivateIncludePaths.AddRange(
 			new string[] {
-				"StateMachineTests/Private",
+                ModuleDirectory + "/Private",
 				// ... add other private include paths required here ...
 			}
 			);
