@@ -2,7 +2,7 @@
 
 #include "StateMachineTests.h"
 
-#include <AutomationTest.h>
+#include <Misc/AutomationTest.h>
 #include <UnrealEngine.h>
 
 #include <HierarchicalStateMachine.h>
@@ -467,7 +467,7 @@ bool FStateMachineDefaultStatesTest::RunTest(const FString& Parameters)
 {
 	BuildTestStateMachine();
 	bool result = true;
-	
+
 	do
 	{
 		s_testObject->bRecord = true;
@@ -532,7 +532,7 @@ bool FStateMachineTransitionsTest::RunTest(const FString& Parameters)
 		TEST(s_testObject->History[3] == TEXT("G1_Exit"), "Incorrect Exit Order.");
 		TEST(s_testObject->History[4] == TEXT("D2_Exit"), "Incorrect Exit Order.");
 		TEST(s_testObject->History[5] == TEXT("A2_Exit"), "Incorrect Exit Order.");
-		
+
 	} while (false);
 
 	DestroyTestStateMachine();

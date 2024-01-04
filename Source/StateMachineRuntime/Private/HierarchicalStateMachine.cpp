@@ -590,9 +590,16 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 	if (_dequeuedEventsLimit == -1)
 		_dequeuedEventsLimit = STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT;
 
+	// OPTIM: could be member arrays in order to limit allocations
+	TArray<State*> exitingStates;
+	TArray<State*> enteringStates;
+
 	uint16 dequeuedEventsCount = 0;
 	while ((dequeuedEventsCount < _dequeuedEventsLimit) && m_eventsQueue.Num() != 0)
 	{
+		exitingStates.Empty();
+		enteringStates.Empty();
+
 		++dequeuedEventsCount;
 		FName evt = m_eventsQueue[0];
 		m_eventsQueue.RemoveAt(0);
@@ -600,18 +607,10 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 		_LogEventPopped(evt);
 #endif
 		const TArray<EventTransition*>& transitions = *m_eventTransitions.Find(evt);
-
-		// OPTIM: could be member arrays in order to limit allocations
-		TArray<State*> exitingStates;
-		TArray<State*> enteringStates;
-
 		for (const EventTransition* transition : transitions)
 		{
 			if (transition->sourceState && m_currentStates.Find(transition->sourceState) == INDEX_NONE)
 				continue;
-
-			exitingStates.Empty();
-			enteringStates.Empty();
 
 			Track* commonTrack = nullptr;
 			if (transition->sourceTrack)
@@ -668,32 +667,49 @@ void UHierarchicalStateMachine::DequeueEvents(uint16 _dequeuedEventsLimit)
 						enteringStates.Add(trackPair.Value->m_defaultState);
 				}
 			}
-
-			exitingStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() > _stateB.GetIndex(); });
-			enteringStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
-
-			// Exiting states
-			for (State* state : exitingStates)
-			{
-				state->Exit.ExecuteIfBound();
-#if STATEMACHINE_HISTORY_ENABLED 
-				_LogStateExited(state);
-#endif
-				m_currentStates.Remove(state);
-			}
-
-			// Entering states
-			for (State* state : enteringStates)
-			{
-				state->Enter.ExecuteIfBound();
-#if STATEMACHINE_HISTORY_ENABLED 
-				_LogStateEntered(state);
-#endif
-				m_currentStates.Add(state);
-			}
-
-			m_currentStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
 		}
+
+		auto removeDuplicates = [](TArray<State*>& _array)
+		{
+			for (int i = 0; i < _array.Num(); ++i)
+			{
+				for (int j = i + 1; j < _array.Num(); ++j)
+				{
+					if (_array[i] == _array[j])
+					{
+						_array.RemoveAt(j);
+					}
+				}
+			}
+		};
+		
+		removeDuplicates(exitingStates);
+		removeDuplicates(enteringStates);
+
+		exitingStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() > _stateB.GetIndex(); });
+		enteringStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
+
+		// Exiting states
+		for (State* state : exitingStates)
+		{
+			state->Exit.ExecuteIfBound();
+#if STATEMACHINE_HISTORY_ENABLED 
+			_LogStateExited(state);
+#endif
+			m_currentStates.Remove(state);
+		}
+
+		// Entering states
+		for (State* state : enteringStates)
+		{
+			state->Enter.ExecuteIfBound();
+#if STATEMACHINE_HISTORY_ENABLED 
+			_LogStateEntered(state);
+#endif
+			m_currentStates.Add(state);
+		}
+
+		m_currentStates.Sort([](const State& _stateA, const State& _stateB) { return _stateA.GetIndex() < _stateB.GetIndex(); });
 	}
 
 	if (dequeuedEventsCount >= STATEMACHINE_DEQUEUEEVENTS_DEFAULTLIMIT)
